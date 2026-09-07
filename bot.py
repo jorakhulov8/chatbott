@@ -50,7 +50,7 @@ def get_model() -> genai.GenerativeModel:
 
 async def ask_gemini(fn, *args, **kwargs):
     """Gemini chaqiruvini bajaradi."""
-    return await asyncio-to_thread(fn, *args, **kwargs)
+    return await asyncio.to_thread(fn, *args, **kwargs)
 
 # ==========================================================
 # 3) TELEGRAM HANDLERLAR
