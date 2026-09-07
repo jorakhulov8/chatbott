@@ -43,14 +43,18 @@ user_chats: dict[int, list] = {}
 # 2) GEMINI MODEL BOSHQARUVI (Barqaror model)
 # ==========================================================
 
-def get_model() -> genai.GenerativeModel:
-    """Doimiy ravishda barqaror gemini-1.5-flash modelini qaytaradi."""
-    return genai.GenerativeModel("gemini-1.5-flash")
+# ==========================================================
+# 2) GEMINI MODEL BOSHQARUVI
+# ==========================================================
 
-
 def get_model() -> genai.GenerativeModel:
-    """Prefiks bilan aniq va barqaror modelni chaqirish."""
+    """Aniq va barqaror modelni chaqirish."""
     return genai.GenerativeModel("models/gemini-1.5-flash")
+
+
+async def ask_gemini(fn, *args, **kwargs):
+    """Gemini chaqiruvini asinxron bajaradi."""
+    return await asyncio.to_thread(fn, *args, **kwargs)
 
 # ==========================================================
 # 3) TELEGRAM HANDLERLAR
