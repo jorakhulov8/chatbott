@@ -15,7 +15,7 @@ from PIL import Image
 # 1) SOZLAMALAR
 # ==========================================================
 
-load_dotenv()  # lokal ishga tushirishda .env fayldan o'qiydi
+load_dotenv()
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -37,71 +37,24 @@ genai.configure(api_key=GEMINI_API_KEY)
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
 
-# Har bir foydalanuvchi uchun suhbat tarixi (RAM ichida, oddiy dict)
 user_chats: dict[int, list] = {}
 
 # ==========================================================
-# 2) GEMINI MODEL BOSHQARUVI (fallback bilan)
+# 2) GEMINI MODEL BOSHQARUVI (Barqaror model)
 # ==========================================================
 
-# Google modellarni tez-tez o'zgartirib/eskirtirib turadi,
-# shuning uchun bir nechta variantni ketma-ket sinaymiz.
-CANDIDATE_MODELS = [
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
-    "gemini-1.0-pro",
-]
-
-_working_model_name: str | None = None
-
-
 def get_model() -> genai.GenerativeModel:
-    """Ishlaydigan Gemini modelini qaytaradi.
-
-    Avval oldin muvaffaqiyatli ishlagan modelni ishlatadi.
-    Agar hali sinalmagan bo'lsa yoki joriy model ishlamay qolsa,
-    ro'yxat bo'yicha birma-bir sinaydi.
-    """
-    global _working_model_name
-
-    if _working_model_name:
-        return genai.GenerativeModel(_working_model_name)
-
-    last_error: Exception | None = None
-    for name in CANDIDATE_MODELS:
-        try:
-            candidate = genai.GenerativeModel(name)
-            candidate.generate_content("salom")  # kichik test so'rov
-            _working_model_name = name
-            log.info("Gemini modeli tanlandi: %s", name)
-            return candidate
-        except Exception as e:
-            last_error = e
-            log.warning("Model ishlamadi (%s): %s", name, e)
-            continue
-
-    raise RuntimeError(f"Hech qaysi Gemini modeli ishlamadi: {last_error}")
-
-
-def reset_model() -> None:
-    """Joriy model xato bersa, uni tashlab, keyingisini sinash uchun."""
-    global _working_model_name
-    _working_model_name = None
+    """Doimiy ravishda barqaror gemini-1.5-flash modelini qaytaradi."""
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 
 async def ask_gemini(fn, *args, **kwargs):
-    """Gemini chaqiruvini bajaradi, birinchi model ishlamasa keyingisiga o'tadi."""
-    try:
-        return await asyncio.to_thread(fn, *args, **kwargs)
-    except Exception:
-        reset_model()
-        raise
-
+    """Gemini chaqiruvini bajaradi."""
+    return await asyncio-to_thread(fn, *args, **kwargs)
 
 # ==========================================================
 # 3) TELEGRAM HANDLERLAR
 # ==========================================================
-
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
@@ -126,17 +79,13 @@ async def handle_photo(message: Message):
     await bot.send_chat_action(message.chat.id, "typing")
 
     try:
-        photo = message.photo[-1]  # eng yuqori sifatdagi variant
+        photo = message.photo[-1]
         file = await bot.get_file(photo.file_id)
         file_bytes = await bot.download_file(file.file_path)
         image = Image.open(io.BytesIO(file_bytes.read()))
 
         model = get_model()
-        try:
-            response = await ask_gemini(model.generate_content, [caption, image])
-        except Exception:
-            model = get_model()
-            response = await ask_gemini(model.generate_content, [caption, image])
+        response = await ask_gemini(model.generate_content, [caption, image])
 
         answer = response.text or "Kechirasiz, javob bo'sh keldi."
         for i in range(0, len(answer), 4000):
@@ -158,18 +107,12 @@ async def handle_text(message: Message):
 
     try:
         model = get_model()
-        try:
-            chat = model.start_chat(history=user_chats[user_id])
-            response = await ask_gemini(chat.send_message, text)
-        except Exception:
-            model = get_model()
-            chat = model.start_chat(history=user_chats[user_id])
-            response = await ask_gemini(chat.send_message, text)
+        chat = model.start_chat(history=user_chats[user_id])
+        response = await ask_gemini(chat.send_message, text)
 
         answer = response.text or "Kechirasiz, javob bo'sh keldi."
         user_chats[user_id] = chat.history
 
-        # Telegram xabar uzunligi cheklovi (4096 belgi)
         for i in range(0, len(answer), 4000):
             await message.answer(answer[i : i + 4000])
 
@@ -179,9 +122,8 @@ async def handle_text(message: Message):
 
 
 # ==========================================================
-# 4) RENDER UCHUN WEB SERVER (uyg'oq turish uchun ping manzili)
+# 4) RENDER UCHUN WEB SERVER
 # ==========================================================
-
 
 async def handle_ping(request):
     return web.Response(text="OK")
@@ -201,7 +143,6 @@ async def start_web_server():
 # ==========================================================
 # 5) ISHGA TUSHIRISH
 # ==========================================================
-
 
 async def main():
     await start_web_server()
