@@ -48,9 +48,9 @@ def get_model() -> genai.GenerativeModel:
     return genai.GenerativeModel("gemini-1.5-flash")
 
 
-async def ask_gemini(fn, *args, **kwargs):
-    """Gemini chaqiruvini bajaradi."""
-    return await asyncio.to_thread(fn, *args, **kwargs)
+def get_model() -> genai.GenerativeModel:
+    """Prefiks bilan aniq va barqaror modelni chaqirish."""
+    return genai.GenerativeModel("models/gemini-1.5-flash")
 
 # ==========================================================
 # 3) TELEGRAM HANDLERLAR
